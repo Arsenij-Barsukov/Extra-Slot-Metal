@@ -1,0 +1,53 @@
+{
+	"Metadata":
+	{
+		"Name": "Extra slot Ultimate Metal Sonic",
+		"Author": "Telejaba",
+		"Description": "Ultimate Metal Sonic now playable without overlapping Sonic's Slot",
+      "URL":"https://gamebanana.com/wips/70293",
+		"ModVersion": "Demo 1 Patch 1",
+		"GameVersion": "22.09.10.0"
+	},
+	"Settings":
+	{
+		"Group1":
+		[
+			{
+				"InternalName": "MetalPalette",
+				"DisplayName": "Metal Sonic's Palette:",
+				"Variable": "Metal.Palette",
+				"DefaultValue": "0",	
+				"Category": "Appearance",			
+				"Options":
+				{
+					"0": "Ultimate",
+					"1": "CD",
+					"2": "Chaotix",
+					"3": "Mania",
+					"4": "Silver",
+					"5": "Robo",
+					"6": "Mecha",
+					"7": "MK2",
+					"8": "Kai",				
+			   	"9": "Furnace",
+			   	"a": "S3&K Sonic",
+			   	"b": "Cyber sonic",
+			   	"c": "Harry Potter Obama 10"
+				}
+			},
+			{
+				"InternalName": "MetalPartner",
+				"DisplayName": "Metal Sonic's Partner:",
+				"Variable": "metal.partner",
+				"DefaultValue": "0",
+				"Category": "Gameplay.",				
+				"Options":
+				{
+					"0": "None",
+					"1": "Metal Tails",
+					"2": "Tails Doll"
+				}
+			}
+		]
+	}
+}
