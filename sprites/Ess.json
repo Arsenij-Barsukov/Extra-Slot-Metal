@@ -1,0 +1,5 @@
+{
+	"ESS_Char_Es3":  {"File": "interface.png", "Rect": "40,16,27,40", "Center": "14,40" },
+	"ESS_Life_Es_Es3":  { "File": "interface.png", "Rect": "18,16,20,40", "Center": "16,-8" },
+	"ESS_Cont_Es_Es3":  { "File": "interface.png", "Rect": "18,16,21,16", "Center": "16,-8" }
+}

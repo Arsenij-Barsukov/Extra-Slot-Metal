@@ -1,0 +1,19 @@
+{
+	"hud_lives_icon_slot3":  { "File": "interface.png", "Rect": "1,0,82,16", "Center": "0,0" },
+	"3hud_bonus_icon_blue":  { "File": "interface.png", "Rect": "2,57,12,19", "Center": "0,0" },
+	"continue_icon_slot3":  { "File": "interface.png", "Rect": "0,32,17,24", "Center": "9,23" },
+	"monitor_icon_slot3":  { "File": "interface.png", "Rect": "0,0,16,16", "Center": "8,8" },
+	"dataSel_character_slot3":  { "File": "interface.png", "Rect": "40,16,27,40", "Center": "14,40" },
+	"dataSel_lifeContinue_slot3":  { "File": "interface.png", "Rect": "18,16,21,40", "Center": "16,-8" },
+	"dataSel_life_slot3":  { "File": "interface.png", "Rect": "18,16,21,16", "Center": "16,-8" },
+	"goal_metal":  { "File": "interface.png", "Rect": "84,0,48,32", "Center": "24,16" },
+	"goal_metal_UW":  { "File": "interface.png", "Rect": "84,32,48,32", "Center": "24,16" },
+	"metal_text":  { "File": "interface.png", "Rect": "2,77,152,16", "Center": "102,8" },
+	"dataSel_savePortrait_slot3":  { "File": "interface.png", "Rect": "0,97,80,56", "Center": "40,120" },
+	"dataSel_savePortrait_slot3Super":  { "File": "interface.png", "Rect": "80,97,80,56", "Center": "40,120" },
+	"MetalPose":  { "File": "interface.png", "Rect": "155,1,65,96", "Center": "31,47" },
+	"MetalMini":  { "File": "interface.png", "Rect": "23,57,12,20", "Center": "6,12" },
+	"MetalMicro":  { "File": "interface.png", "Rect": "42,60,14,12", "Center": "8,4" },
+	"titlecard_bluebar":  { "File": "TitleCard_PeriwinkleBar.png", "Rect": "0,48,64,176", "Center": "0,0" },
+   "metal_logo":  { "File": "metal_logo.png"}
+}
