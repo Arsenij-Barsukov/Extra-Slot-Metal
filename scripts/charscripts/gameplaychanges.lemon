@@ -1,0 +1,761 @@
+//GAMEPLAY CHANGES
+
+//start location and animation has to be fixed for ICZ1 and made compatible with CNZ of D.A.Garden
+//PART 2
+//# address-hook(0x0067ee) end(0x0069b6)
+function void fn0067ee()
+{
+	if (XtraChar != 3 && !isMainCharacter(CHARACTER_SONIC)) //check only for Metal
+	{
+		base.fn0067ee()
+		return
+	}
+
+	//Is Extra Life UNDER metal in load order?
+	//Extra life has to take over in CNZ and MHZ
+	u64 extraLife = stringformat("goal_extraLife_UW", 0)
+	if(Renderer.hasCustomSprite(extraLife) && ((global.zone_act == 0x0300) || (global.zone_act == 0x0700)))
+	{
+		base.fn0067ee()
+		return
+	}
+	
+	u32[0xffffb094] = 0x006c2c
+	InitializeGameCharacters()
+	RestoreShield()
+	if (checkpoint.number != 0 || global.stage_type != 0)
+		return
+	
+
+	
+	A1 = 0xffffb000
+	A2 = 0xffffb04a
+	if (global.zone_act == 0x0000)
+	{
+		// Angel Island Zone
+		if (isSonicIntro())
+		{
+			// Trigger intro
+			u32[0xffffb172] = 0x067472
+			global.level_started = 0
+		}
+	#if STANDALONE
+		else if (isMainCharacter(CHARACTER_KNUCKLES) && Game.getSetting(SETTING_AIZ_INTRO_KNUCKLES) != 0 && !Game.isTimeAttack())
+		{
+			u32[0xffffb172] = 0x063446
+		}
+	#endif
+	}
+	else if (global.zone_act == 0x0100)
+	{
+		// Hydrocity Zone
+		objA1.state = char.state.FALLING_PANIC
+		
+		//Mighty should roll in if coming from knux path (because they jumped)
+		if (global.characters != CHARS_KNUCKLES_ALONE && level.start_location == 2)
+		{
+			objA1.state = char.state.ROLLING
+		}
+		
+		if (global.characters == CHARS_KNUCKLES_ALONE)
+		{
+			u16[A1 + 0x20] = 0x2121
+			u8[A1 + 0x23] = 1
+			objA1.animation.timer = 0	// This is A0 instead of A1 in original, thanks to Clownacy (https://forums.sonicretro.org/index.php?showtopic=30778&view=findpost&p=893997)
+		}
+		objA1.flags2a |= char.flag.IN_AIR
+		if (global.characters == CHARS_TAILS_ALONE)
+		{
+			u8[A1 + 0x40] = 0x01
+		}
+		if (u32[A2] != 0)
+		{
+			u8[A2 + 0x20] = char.state.FALLING_PANIC
+			u8[A2 + 0x2a] |= char.flag.IN_AIR
+			u8[A2 + 0x40] = 0x01
+		}
+	}
+	else if (global.zone_act == 0x0200)
+	{
+		// Marble Garden Zone
+		objA1.state = char.state.FALLING_PANIC
+		objA1.flags2a |= char.flag.IN_AIR
+		if (u32[A2] != 0)
+		{
+			u8[A2 + 0x20] = char.state.FALLING_PANIC
+			u8[A2 + 0x2a] |= char.flag.IN_AIR
+		}
+	}
+	else if (global.zone_act == 0x0300)
+	{
+		// Carnival Night Zone
+		// This one is completely different if we're in DA GARDEN
+		// It's the only thing I need to patch for Mighty so I'll do it here
+		//find a unique texture used in DA Garden. If found then it's locked on!
+		//There should be no chance another mod will come out with a picture called obj_dark_sand_pit_overlay_shallow184!
+		u64 key = stringformat("obj_dark_sand_pit_overlay_shallow184", 0)
+		if(Renderer.hasCustomSprite(key))
+		{ //DA GARDEN	
+			if (level.start_location == 1 && !isMainCharacter(CHARACTER_TAILS))
+			{
+				u32[0xffffb04a] = 0x01365c		// load Tails into the player 2 position of the object status table
+				u16[0xffffb05a] = u16[0xffffb010]		// copy x position
+				u16[0xffffb05e] = u16[0xffffb014]		// copy y position
+				tails.ai_routine = 0x00	// originally 0
+			}
+			else if (level.start_location == 1 && isMainCharacter(CHARACTER_TAILS))
+			{
+				tails.ai_routine = 0x20
+			}
+			else // if (isMainCharacter(CHARACTER_KNUCKLES))
+			{
+				u32[0xffffb172] = 0x044a0c // load Obj_LevelIntro_PlayerRun
+			}
+		}
+		else
+		{ //NORMAL SONIC 3 AIR
+			bool spawnAITails = (XtraChar == 3)	// Excluding Sonic & Tails
+		#if STANDALONE
+			if (level.start_location == 1 && isMainCharacter(CHARACTER_KNUCKLES))
+			{
+				spawnAITails = true
+			}
+		#endif
+			if (spawnAITails)
+			{
+				u32[0xffffb04a] = 0x01365c
+				u16[0xffffb05a] = u16[0xffffb010]
+				u16[0xffffb05e] = u16[0xffffb014]
+				tails.ai_routine = 0
+			}
+			else if (isMainCharacter(CHARACTER_TAILS))
+			{
+				tails.ai_routine = 0x20
+			}
+			else if (isMainCharacter(CHARACTER_KNUCKLES))
+			{
+				u32[0xffffb172] = 0x044a0c
+			}
+		}
+	}
+	else if (global.zone_act == 0x0500)
+	{
+		// IceCap Zone
+		// Mighty Starts like Tails
+		u32[0xffffb172] = 0x039b66	
+	}
+	else if (global.zone_act == 0x0600)
+	{
+		// Launch Base Zone
+		u32[0xffffb172] = 0x039a40
+	}
+	else if (global.zone_act == 0x0700)
+	{
+		// Mushroom Hill Zone
+		if (isMainCharacter(CHARACTER_KNUCKLES))
+		{
+			objA1.state = char.state.FALLING_PANIC
+			objA1.flags2a |= char.flag.IN_AIR
+		}
+		else if (global.lock_on_state == 0)
+		{
+			// Add Tails
+			if (XtraChar == 3)
+			{
+				u32[0xffffb04a] = 0x01365c
+				u16[0xffffb05a] = u16[0xffffb010]
+				u16[0xffffb05e] = u16[0xffffb014]
+				tails.ai_routine = 0
+			}
+			else if (isMainCharacter(CHARACTER_TAILS))
+			{
+				tails.ai_routine = 0x20
+			}
+		}
+	}
+	else if (global.zone_act == 0x0800)
+	{
+		// Sandopolis Zone
+		u32[0xffffb172] = 0x041fee
+		objA1.state = char.state.ROLLING
+		objA1.flags2a |= char.flag.IN_AIR
+		if (u32[A2] != 0)
+		{
+			u8[A2 + 0x20] = char.state.ROLLING
+			u8[A2 + 0x2a] |= char.flag.IN_AIR
+		}
+	}
+	else if (global.zone_act == 0x0900)
+	{
+		// Lava Reef Zone
+		if (global.characters != CHARS_KNUCKLES_ALONE)
+		{
+			objA1.state = char.state.FALLING_PANIC
+			objA1.flags2a |= char.flag.IN_AIR
+			if (u32[A2] != 0)
+			{
+				u8[A2 + 0x20] = char.state.FALLING_PANIC
+				u8[A2 + 0x2a] |= char.flag.IN_AIR
+			}
+		}
+		else
+		{
+			u32[0xffffb172] = 0x044a0c
+		}
+	}
+	else if (global.zone_act == 0x0b00)
+	{
+		// Death Egg Zone
+		u32[0xffffb172] = 0x044a0c
+	}
+	else if (global.zone_act == 0x1600)
+	{
+		// Lava Reef boss act
+		objA1.state = char.state.FALLING_PANIC
+		objA1.flags2a |= char.flag.IN_AIR
+		if (u32[A2] != 0)
+		{
+			u8[A2 + 0x20] = char.state.FALLING_PANIC
+			u8[A2 + 0x2a] |= char.flag.IN_AIR
+		}
+	}
+	else if (global.zone_act == 0x1601)
+	{
+		// Hidden Palace Zone
+		u32[0xffffb172] = 0x044a0c
+	}
+}
+
+//PART1
+//# address-hook(0x01be46) end(0x01bfae)
+function void SetupCharacterAtStartPosition()
+{
+	if (XtraChar != 3 && !isMainCharacter(CHARACTER_SONIC))
+	{
+		base.SetupCharacterAtStartPosition()
+		return
+	}
+	//only metal
+	
+	if (checkpoint.number != 0)
+	{
+		SetupCharacterAtLastCheckpoint()
+		D1.u16 = u16[0xffffb010]
+		D0.u16 = u16[0xffffb014]
+	}
+	else
+	{
+		A1 = isMainCharacter(CHARACTER_KNUCKLES) ? 0x1e3cd8 : 0x1e3c18
+		A1 += global.zone * 8 + global.act * 4
+		D1 = u16[A1]
+		D0 = u16[A1+2]
+		u16[0xffffb010] = D1.u16
+		u16[0xffffb014] = D0.u16
+
+		if (global.zone_act == 0x0000)
+		{
+			if (isSonicIntro())
+			{
+				D1.u16 = 0
+				D0.u16 = 0x420
+				u16[0xffffb010] = 0x0040
+				u16[0xffffb014] = 0x0420
+				move_area.left = 0
+				u16[0xffffee0c] = 0
+				u16[0xffffee1c] = 0
+			}
+		#if STANDALONE
+			else if (isMainCharacter(CHARACTER_KNUCKLES) && (Game.getSetting(SETTING_AIZ_INTRO_KNUCKLES) != 0 || Game.isTimeAttack()))
+			{
+				// First set the desired camera position, then character position gets calculated after the if-else-blocks
+				//  -> Camera positions here should be the same as in "fn0634ca"
+				if (Game.getSetting(SETTING_LEVELLAYOUTS) == 2)
+				{
+					u16[0xffffb010] = 0x1830
+					u16[0xffffb014] = 0x0119
+					D1.u16 = 0x1768
+					D0.u16 = 0x0090
+					move_area.bottom.current = D0.u16
+					move_area.bottom.target = D0.u16
+				}
+				else
+				{
+					D1.u16 = 0x1390
+					D0.u16 = 0x0380
+				}
+				D1.u16 += getScreenWidth() / 2
+				D0.u16 += 96
+			}
+		#endif
+		}
+		else if (global.zone_act == 0x0300)
+		{
+			if (isMainCharacter(CHARACTER_KNUCKLES))
+			{
+			#if STANDALONE
+				if (level.start_location == 1)
+				{
+					u16[0xffffb010] = 0x0018
+					u16[0xffffb014] = 0x0600
+					D1.u16 = 0x0018
+					D0.u16 = 0x0600
+				}
+				else
+			#endif
+				{
+					D1.u16 += 0xb0
+				}
+			}
+		}
+		else if (global.zone_act == 0x0500)
+		{
+			//Metal has to starts like Tails			
+				u16[0xffffb010] = 0x3780
+				u16[0xffffb014] = 0x01e0
+				camera.position.x.u16 = 0x36f0
+				camera.position.y.u16 = 0x0200
+				move_area.left  = 0x35a0
+				u16[0xffffee0c] = 0x35a0
+				u16[0xffffee1c] = 0x35a0
+				level.vertical_wrap = 0x0200
+				u16[0xffffee10] = 0x0200
+				u16[0xffffee20] = 0x0200
+				u16[0xffffee60] = 0x36f0
+				u16[0xffffee64] = 0x0200
+				return		
+		}
+	#if STANDALONE
+		else if (global.zone_act == 0x0601)
+		{
+			if (isMainCharacter(CHARACTER_KNUCKLES) && getNumPlayers() == 2)
+			{
+				// Move Knuckles a bit to the right in LBZ 2 to make space for Tails
+				u16[0xffffb010] += 0x10
+				D1.u16 += 0x10
+			}
+		}
+	#endif
+		else if (global.zone_act == 0x0700)
+		{
+			if (!isMainCharacter(CHARACTER_KNUCKLES) && global.lock_on_state == 0)
+			{
+				move_area.left  = 0x00c0
+				u16[0xffffee0c] = 0x00c0
+				u16[0xffffee1c] = 0x00c0
+				D1.u16 = 0x0160
+			}
+		}
+		else if (global.zone_act == 0x0900)
+		{
+			if (isMainCharacter(CHARACTER_KNUCKLES))
+			{
+				D1.u16 += 0xb0
+			}
+		}
+		else if (global.zone_act == 0x1601)//HIDDEN PALACE
+		{	
+			//Always start from below (sonic), unless the upper path was taken while playing
+			if (level.start_location == 2)
+			{
+				A1 = 0x1e3cd8
+			}
+			else
+			{
+				A1 = 0x1e3c18
+			}
+			A1 += global.zone * 8 + global.act * 4
+			D1 = u16[A1]
+			D0 = u16[A1+2]
+			u16[0xffffb010] = D1.u16
+			u16[0xffffb014] = D0.u16
+			D1.u16 += 0xb0 + getScreenExtend()
+		}		
+		else if (global.zone_act == 0x0b00) //DEATH EGG
+		{
+			D1.u16 += 0xb0 + getScreenExtend()
+		}
+	#if STANDALONE
+		else if (global.zone == 0x13)
+		{
+			// Gumball Machine:
+			// Do not allow for jumping in first frame
+			u8[0xffffb000 + 0x20] = char.state.STANDING
+			u8[0xffffb000 + 0x2a] |= char.flag.IN_AIR
+			u8[0xffffb04a + 0x20] = char.state.STANDING
+			u8[0xffffb04a + 0x2a] |= char.flag.IN_AIR
+		}
+		else if (global.zone == 0x15)
+		{
+			// Slot Machine
+			D1.u16 -= getScreenExtend()
+		}
+	#endif
+	}
+
+	D1.s16 = max(D1.s16 - getScreenWidth() / 2, 0)
+	if (competition_mode.active == 0)
+	{
+	#if STANDALONE
+		// Avoid exact tile edges
+		//  -> This was particularly added in to avoid glitches in first pixel row after exiting first Giant Ring in AIZ 2
+		//     (There's probably a better solution, that generally solves this type of glitches when going left in AIZ 2)
+		if ((D1.u16 & 0x0f) == 0)
+			++D1.u16
+	#endif
+		D1.u16 = min(D1.u16, move_area.right)
+	}
+
+	camera.position.x.u16 = D1.u16
+	u16[0xffffee60] = D1.u16
+
+	D0.s16 = clamp(D0.s16 - 96, 0, s16(move_area.bottom.current))
+	camera.position.y.u16 = D0.u16
+	u16[0xffffee64] = D0.u16
+}
+
+//ICE CAP SPAWN TAILS
+//I changed the starting point, tails needs a reset if he is with metal
+//TAILS NEEDS A RESET IF PLAYING AS METAL AND TAILS in ICZ
+//# address-hook(0x013a10) end(0x013b24)
+function void Character.TailsAI.Init()
+{
+	//make it only for metal and only in ICZ
+	if (global.zone_act != 0x0500||XtraChar != 3 && !isMainCharacter(CHARACTER_SONIC))
+	{
+		base.Character.TailsAI.Init()
+		return
+	}
+	
+	if (u8[0xfffff746] == 0)	// This is some checkpoint number backup for Tails
+	{
+		if (global.zone_act == 0x0100 || global.zone_act == 0x0200 || global.zone_act == 0x0600 || global.zone_act == 0x0900 || global.zone_act == 0x1600)
+		{
+			tails.respawn_counter = 0
+			tails.ai_routine = 0x06
+			char.control_flags = 0
+			return
+		}
+		else if (global.zone_act == 0x0800 || global.zone == 0x17)
+		{
+			tails.respawn_counter = 0
+			tails.ai_routine = 0x06
+			return
+		}
+		else if (global.zone_act == 0x0000)		// AIZ 1
+		{
+		#if STANDALONE
+			// We want Tails to appear right from the start in Knuckles & Tails mode, unless using Knuckles intro
+			if (isMainCharacter(CHARACTER_SONIC) || Game.getSetting(SETTING_AIZ_INTRO_KNUCKLES))
+		#endif
+			{
+				Character.CheckDiedStateEnd()
+				tails.ai_routine = 0x0a
+				char.control_flags = 0x83
+				return
+			}
+		}
+		else if (global.zone_act == 0x0300)		// CNZ 1
+		{
+		#if STANDALONE
+			if (!isMainCharacter(CHARACTER_KNUCKLES) || level.start_location == 1)
+		#endif
+			{
+				char.position.x.u16 = 0x18
+				char.position.y.u16 = 0x600
+				char.flags = char.flag.IN_AIR
+				tails.control_counter = 0
+				tails.respawn_counter = 0
+				tails.ai_routine = 0x0c
+				return
+			}
+		}
+		else if (global.zone_act == 0x0500 || global.zone_act == 0x0a00)	// ICZ 1 or SSZ (S/T)
+		{
+		#if STANDALONE
+			if (global.zone_act == 0x0500)//(isMainCharacter(CHARACTER_KNUCKLES))
+			{
+				tails.respawn_counter = 0
+				tails.ai_routine = 0x02
+				char.control_flags = 0x81
+				char.flags = char.flag.IN_AIR
+				char.position.x.u16 = 0
+				char.position.y.u16 = 0
+				tails.flight_countdown = 0xf0
+				return
+			}
+		#endif
+
+			// Disable Tails
+			// TODO: At least in SSZ, we should spawn Tails as well right from the start (he will reappear after a death anyway)
+			RespawnTails()
+			tails.ai_routine = 0x0a
+			char.control_flags = 0x83
+			return
+		}
+		else if (global.zone_act == 0x0700 && global.lock_on_state == 0)
+		{
+			// MHZ 1
+			char.flags = char.flag.IN_AIR
+			tails.control_counter = 0
+			tails.respawn_counter = 0
+			tails.ai_routine = 0x0c
+
+		#if STANDALONE
+			if (isMainCharacter(CHARACTER_KNUCKLES))
+			{
+				char.position.x.u16 += 0x10
+				char.position.y.u16 -= 0x10
+				char.render_flags &= ~render_flag.FLIP_X
+				char.state = char.state.FALLING_PANIC
+				char.velocity.x = 0
+				char.velocity.y = 0
+				char.groundspeed = 0
+				char.control_flags = 0
+				tails.ai_routine = 0x06
+				return
+			}
+		#endif
+
+			char.position.x.u16 = 0xd8
+			char.position.y.u16 = 0x500
+			return
+		}
+	}
+
+	char.state = char.state.RUNNING
+	char.velocity.x = 0
+	char.velocity.y = 0
+	char.groundspeed = 0
+	char.flags = 0
+	char.control_flags = 0
+	tails.respawn_counter = 0
+	tails.ai_routine = 0x06
+}
+
+
+//ROCK BREAKING
+//Metal can break all NON knuckles walls and rocks if he is using his overdrive
+//-----------------
+//# address-hook(0x01fd08) end(0x01ff1a)
+function void fn01fd08()
+{
+	if (XtraChar != 3 && !isMainCharacter(CHARACTER_SONIC))
+	{
+		base.fn01fd08()
+		return
+	}
+	
+	u16[A0 + 0x30] = u16[0xffffb018]
+	u16[A0 + 0x36] = u16[0xffffb062]
+
+	D1 = objA0.box_size.x + 11
+	D2 = objA0.box_size.y
+	D3.u16 = D2.u16 + 1
+	D4.u16 = objA0.position.x.u16
+	fn01dc56()
+
+	D6 = (D6 << 16) + (D6 >> 16)
+	if (D6.u16 & 0x03)
+	{
+		bool canBreakWall = false
+
+		A1 = 0xffffb000
+		D1.u16 = u16[A0 + 0x30]
+		if (D6.u16 & 0x01)
+		{
+			if (u8[A1 + 0x38] == CHARACTER_KNUCKLES)
+			{
+				// Knuckles can break all walls
+				canBreakWall = true
+			}
+			else
+			{
+				if ((objA0.subtype2c & 0x80) == 0)	// Special Knuckles-only wall?
+				{
+					if (super.active)
+					{
+						// Super form breaks walls even when going slow
+						canBreakWall = true
+					}
+					//Metal is not affected by the fire shield, but by his overdrive
+					//else if ((objA0.flags2a & 0x20) || (u8[A1 + 0x2b] & char.bonus.SHIELD_FIRE))
+					else if ((objA0.flags2a & 0x20) || Metal.Overdrive == 2)
+					{
+						// Normal Sonic and Tails need to quickly roll into a wall to break it (this includes the fire shield attack)
+						canBreakWall = (objA1.state == char.state.ROLLING && abs(D1.s16) >= 0x480)|| Metal.Overdrive == 2
+					}
+				}
+			}
+
+			if (canBreakWall)
+			{
+				objA0.flags2a &= ~0x20
+				Rocks.BreakWall()
+
+				if (objA0.flags2a & 0x40)
+				{
+					// Check for second character
+					A1 = 0xffffb04a
+					if (u8[A1 + 0x38] == CHARACTER_KNUCKLES || objA1.state == char.state.ROLLING)
+					{
+						objA1.velocity.x = u16[A0 + 0x36]
+						u16[A1 + 0x1c] = objA1.velocity.x
+						objA0.flags2a &= ~0x40
+						objA1.flags2a &= ~char.flag.PUSHING
+					}
+				}
+			}
+		}
+
+		if (!canBreakWall)
+		{
+			// Give second character a try
+			A1 = 0xffffb04a
+			D1.u16 = u16[A0 + 0x36]
+
+			if (objA0.flags2a & 0x40)
+			{
+				if (u8[A1 + 0x38] == CHARACTER_KNUCKLES)
+				{
+					// Knuckles can break all walls
+					canBreakWall = true
+				}
+				else
+				{
+					if ((objA0.subtype2c & 0x80) == 0)	// Special Knuckles-only wall?
+					{
+						// Normal Sonic and Tails need to quickly roll into a wall to break it (this includes the fire shield attack)
+						canBreakWall = (objA1.state == char.state.ROLLING && abs(D1.s16) >= 0x480)
+					}
+				}
+			}
+
+			if (canBreakWall)
+			{
+				objA0.flags2a &= ~0x40
+				Rocks.BreakWall()
+				return
+			}
+		}
+	}
+
+	if (competition_mode.active == 0)
+	{
+		if (checkForUnloadObjectAtPosition(objA0.countdown_value))
+			return
+	}
+	DrawObject()
+}
+
+//WALL BREAKING
+//SAME AS ROCKS
+//# address-hook(0x021568) end(0x021690)
+function void fn021568()
+{
+	if (XtraChar != 3 && !isMainCharacter(CHARACTER_SONIC))
+	{
+		base.fn021568()
+		return
+	}
+
+	u16[A0 + 0x30] = u16[0xffffb018]
+	objA0.value32 = u16[0xffffb062]
+
+	D1 = objA0.box_size.x + 11
+	D2 = objA0.box_size.y
+	D3.u16 = D2.u16 + 1
+	D4.u16 = objA0.position.x.u16
+	fn01dc56()
+
+	if (u8[A0 + 0x2c] & 0x80)
+	{
+		if (level.trigger00 == 0)
+		{
+			DrawOrUnloadObject()
+		}
+		else
+		{
+			UnloadObject()
+		}
+		return
+	}
+
+	D6 = (D6 << 16) + (D6 >> 16)
+	D6.u16 &= 0x03
+	if (D6.u16 == 0)
+	{
+		DrawOrUnloadObject()
+		return
+	}
+
+	A1 = 0xffffb000
+	D1.u16 = u16[A0 + 0x30]
+	if (D6.u16 & 0x01)
+	{
+		bool canBreakWall = false
+		if (super.active || u8[A1 + 0x38] == CHARACTER_KNUCKLES)
+		{
+			// Super/Hyper forms can break walls, and Knuckles can
+			canBreakWall = true
+		}
+		else
+		{
+			// Metal counts on the overdrive
+			//if ((objA0.flags2a & 0x20) || (u8[A1 + 0x2b] & char.bonus.SHIELD_FIRE))			
+			if ((objA0.flags2a & 0x20) || Metal.Overdrive == 2)
+			{
+				canBreakWall = (objA1.state == char.state.ROLLING && abs(D1.s16) >= 0x0480)||Metal.Overdrive == 2
+			}
+		}
+
+		if (canBreakWall)
+		{
+			objA0.flags2a &= ~0x20
+			fn02165a()
+
+			A1 = 0xffffb04a
+			if ((objA0.flags2a & 0x40) && objA1.state == char.state.ROLLING)
+			{
+				objA0.flags2a &= ~0x40
+				objA1.velocity.x = objA0.value32
+				u16[A1 + 0x1c] = objA1.velocity.x
+				objA1.flags2a &= ~char.flag.PUSHING
+			}
+
+			DrawOrUnloadObject()
+			return
+		}
+	}
+
+	A1 = 0xffffb04a
+	D1.u16 = objA0.value32
+	if ((objA0.flags2a & 0x40) && objA1.state == char.state.ROLLING && abs(D1.s16) >= 0x0480)
+	{
+		objA0.flags2a &= ~0x40
+		fn02165a()
+
+	#if STANDALONE
+		if (Game.getSetting(SETTING_FIX_GLITCHES) >= 2)
+		{
+			// Prevent slope glitch here for player 1
+			if ((u8[0xffffb02a] & char.flag.ON_OBJECT) && u16[0xffffb042] == A0.u16)
+			{
+				u8[0xffffb02a] &= ~char.flag.ON_OBJECT
+				u8[0xffffb02a] |= char.flag.IN_AIR
+			}
+		}
+	#endif
+	}
+#if STANDALONE
+	else if (global.zone == 0x02)
+	{
+		// In MGZ, make all normal breakable walls also breakable by spinning top
+		D6 = (D6 << 16) + (D6 >> 16)
+		fn021758()
+	}
+#endif
+	else
+	{
+		DrawOrUnloadObject()
+	}
+}

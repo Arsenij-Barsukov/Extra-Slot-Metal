@@ -1,0 +1,210 @@
+﻿define u16 AWESOME_ACHIEVEMENT_AIZ_METAL	= 300
+define u16 AWESOME_ACHIEVEMENT_HCZ_METAL	= 301
+define u16 AWESOME_ACHIEVEMENT_MGZ_METAL	= 302
+define u16 AWESOME_ACHIEVEMENT_CNZ_METAL	= 303
+define u16 AWESOME_ACHIEVEMENT_ICZ_METAL	= 304
+define u16 AWESOME_ACHIEVEMENT_LIGHTSOFF_METAL	= 350
+
+// Returns data to be used in the achievement list renderer.
+function string AchievementsPlus.AchivementsManager.getAchievementDetail(u16 achievementID, u8 parse)
+{
+	if (achievementID == AWESOME_ACHIEVEMENT_AIZ_METAL)
+	{
+		constant array<string> GET_DATA =
+		{
+			// Achievement title, Achievement stars
+			"Cyber Island ", "10000",
+			// Achievement sub-title, Achievement description
+			"Angel island beater", "Metal got the good future in Angel Island zone",
+			// Achievement icon
+			"metal_logo"
+		}
+		
+		// Return tha data
+		return GET_DATA[parse]
+	}
+	
+	// Return the base function
+	return base.AchievementsPlus.AchivementsManager.getAchievementDetail(achievementID, parse)
+}
+
+//@ Function taken from sonic3air_dev/scripts/general/saveslots.lemon
+//# address-hook(0x00c434) end(0x00c4d0)
+function void SaveGameOnLevelFinished()
+{
+	if (global.zone == 0x00 && XtraChar == 3)
+		AchievementsPlus.AchivementsManager.setAchievementComplete(AWESOME_ACHIEVEMENT_AIZ_METAL)
+	
+	// Call the base function
+	base.SaveGameOnLevelFinished()
+}
+
+// Returns data to be used in the achievement list renderer.
+function string AchievementsPlus.AchivementsManager.getAchievementDetail(u16 achievementID, u8 parse)
+{
+	if (achievementID == AWESOME_ACHIEVEMENT_HCZ_METAL)
+	{
+		constant array<string> GET_DATA =
+		{
+			// Achievement title, Achievement stars
+		   "Mercury City", "10000",
+			// Achievement sub-title, Achievement description
+			"Hydro City beater", "Metal got the good future in   HydroCity zone",
+			// Achievement icon
+			"metal_logo"
+		}
+		
+		// Return tha data
+		return GET_DATA[parse]
+	}
+	
+	// Return the base function
+	return base.AchievementsPlus.AchivementsManager.getAchievementDetail(achievementID, parse)
+}
+
+//@ Function taken from sonic3air_dev/scripts/general/saveslots.lemon
+//# address-hook(0x00c434) end(0x00c4d0)
+function void SaveGameOnLevelFinished()
+{
+	if (global.zone == 0x01 && XtraChar == 3)
+		AchievementsPlus.AchivementsManager.setAchievementComplete(AWESOME_ACHIEVEMENT_HCZ_METAL)
+	
+	// Call the base function
+	base.SaveGameOnLevelFinished()
+}
+
+// Returns data to be used in the achievement list renderer.
+function string AchievementsPlus.AchivementsManager.getAchievementDetail(u16 achievementID, u8 parse)
+{
+	if (achievementID == AWESOME_ACHIEVEMENT_MGZ_METAL)
+	{
+		constant array<string> GET_DATA =
+		{
+			// Achievement title, Achievement stars
+		   "DA garden", "11000",
+			// Achievement sub-title, Achievement description
+			"Marble Garden beater", "Metal got the good future in   Marble Garden zone",
+			// Achievement icon
+			"metal_logo"
+		}
+		
+		// Return tha data
+		return GET_DATA[parse]
+	}
+	
+	// Return the base function
+	return base.AchievementsPlus.AchivementsManager.getAchievementDetail(achievementID, parse)
+}
+
+//@ Function taken from sonic3air_dev/scripts/general/saveslots.lemon
+//# address-hook(0x00c434) end(0x00c4d0)
+function void SaveGameOnLevelFinished()
+{
+	if (global.zone == 0x02 && XtraChar == 3)
+		AchievementsPlus.AchivementsManager.setAchievementComplete(AWESOME_ACHIEVEMENT_HCZ_METAL)
+	
+	// Call the base function
+	base.SaveGameOnLevelFinished()
+}
+
+// Returns data to be used in the achievement list renderer.
+function string AchievementsPlus.AchivementsManager.getAchievementDetail(u16 achievementID, u8 parse)
+{
+	if (achievementID == AWESOME_ACHIEVEMENT_CNZ_METAL)
+	{
+		constant array<string> GET_DATA =
+		{
+			// Achievement title, Achievement stars
+		   "Electro party", "11000",
+			// Achievement sub-title, Achievement description
+			"Carnival Night beater", "Metal got the good future in   Carnival Night zone",
+			// Achievement icon
+			"metal_logo"
+		}
+		
+		// Return tha data
+		return GET_DATA[parse]
+	}
+	
+	// Return the base function
+	return base.AchievementsPlus.AchivementsManager.getAchievementDetail(achievementID, parse)
+}
+
+//@ Function taken from sonic3air_dev/scripts/general/saveslots.lemon
+//# address-hook(0x00c434) end(0x00c4d0)
+function void SaveGameOnLevelFinished()
+{
+	if (global.zone == 0x03 && XtraChar == 3)
+		AchievementsPlus.AchivementsManager.setAchievementComplete(AWESOME_ACHIEVEMENT_CNZ_METAL)
+	
+	// Call the base function
+	base.SaveGameOnLevelFinished()
+}
+
+// Returns data to be used in the achievement list renderer.
+function string AchievementsPlus.AchivementsManager.getAchievementDetail(u16 achievementID, u8 parse)
+{
+	if (achievementID == AWESOME_ACHIEVEMENT_ICZ_METAL)
+	{
+		constant array<string> GET_DATA =
+		{
+			// Achievement title, Achievement stars
+		   "Ice and Fire", "11000",
+			// Achievement sub-title, Achievement description
+			"Ice Cap beater", "Metal got the good future in   Ice Cap zone",
+			// Achievement icon
+			"metal_logo"
+		}
+		
+		// Return tha data
+		return GET_DATA[parse]
+	}
+	
+	// Return the base function
+	return base.AchievementsPlus.AchivementsManager.getAchievementDetail(achievementID, parse)
+}
+
+//@ Function taken from sonic3air_dev/scripts/general/saveslots.lemon
+//# address-hook(0x00c434) end(0x00c4d0)
+function void SaveGameOnLevelFinished()
+{
+	if (global.zone == 0x04 && XtraChar == 3)
+		AchievementsPlus.AchivementsManager.setAchievementComplete(AWESOME_ACHIEVEMENT_CNZ_METAL)
+	
+	// Call the base function
+	base.SaveGameOnLevelFinished()
+}
+
+// Returns data to be used in the achievement list renderer.
+function string AchievementsPlus.AchivementsManager.getAchievementDetail(u16 achievementID, u8 parse)
+{
+	if (achievementID == AWESOME_ACHIEVEMENT_LIGHTSOFF_METAL)
+	{
+		constant array<string> GET_DATA =
+		{
+			// Achievement title, Achievement stars
+		   "I'm fueling out of gas, echidna (⁠T⁠T⁠)", "10000",
+			// Achievement sub-title, Achievement description
+			"Lights off", "Knuckles turned lights off when you playing as Metal",
+			// Achievement icon
+			"metal_logo"
+		}
+		
+		// Return tha data
+		return GET_DATA[parse]
+	}
+	
+	// Return the base function
+	return base.AchievementsPlus.AchivementsManager.getAchievementDetail(achievementID, parse)
+}
+
+//@ Function taken from Oxygen/sonic3air/scripts/maingame/cutscene_knuckles.lemon
+//# address-hook(0x065c78) end(0x065caa)
+function void fn065c78()
+{
+	if (XtraChar == 3)
+		AchievementsPlus.AchivementsManager.setAchievementComplete(AWESOME_ACHIEVEMENT_LIGHTSOFF_METAL)
+	
+	// Call the base function
+	base.fn065c78()
+}

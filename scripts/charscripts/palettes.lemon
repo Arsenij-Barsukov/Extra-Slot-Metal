@@ -1,0 +1,134 @@
+//Small Custom for the special forms originally in 3D2D Glitches adjusted for player 1
+//Cycle between colors with no flash, faster cycle for the hyper form.
+function void UpdatePaletteEffects.SuperForm.moddingVersion(u8 characterVersion)
+{
+	if (XtraChar != 3 && !isMainCharacter(CHARACTER_SONIC))
+	{
+		base.UpdatePaletteEffects.SuperForm.moddingVersion(characterVersion)
+		return 
+	}
+	if (super.palettefx.state & 0x80)
+	{
+		// Update ongoing palette effect
+		u8 character = getMainCharacter()
+		bool isHyperEffect = (super.active == 0xff || super.active.tails == 0xff)
+		u16 nextFrame = (super.palettefx.frame + 6) % (true ? 108 : 18)//(isHyperEffect ? 108 : 18)
+		u16 blendFactor = super.palettefx.timer * 0x100 / 0x0f
+		if (nextFrame % 18 == 0)
+			blendFactor = 0x100 - blendFactor
+		else if (nextFrame % 18 == 12)
+			blendFactor = 0
+
+		for (u8 underwater = 0; underwater < (level.water_present ? 2 : 1); ++underwater)
+		{
+			u32 offset = character * 0x40 + (underwater ? 0x300 : 0)
+			u32 source = 0x802180 + offset
+			u32 dest   = 0x802000 + offset
+
+			// Load modded Super palette, hyper or not!
+			u8 line = 5
+			//if (isHyperEffect)
+			//{
+				// Hyper color cycle (if mod supports it)
+				line = 6 + super.palettefx.frame / 18
+				if (!System.hasExternalPaletteData(getCharacterPaletteKey(character), line))
+					line = 5
+			//}
+			zeroMemory(dest, 0x40)
+			u16 numColors = System.loadExternalPaletteData(getCharacterPaletteKey(character), line, 0x800000, 0x20)
+			for (u16 i = 0; i < numColors; ++i)
+			{
+				u32 rgba = u32[0x800000 + i * 4]
+				u16[dest + i * 2] = (rgba & 0xff000000) ? packColorExt(rgba) : 0
+			}
+
+			for (u8 k = 0; k < 0x40; k += 2)
+			{
+				if (u16[dest + k] == 0)
+				{
+					// Use original color as fallback
+					u16[dest + k] = u16[source + k]
+				}
+				//no flash, thanks!
+				//else
+				//{
+				//	// Apply flash effect
+				//	//u16[dest + k] = blendColorsPacked(u16[dest + k], 0x0eee, blendFactor)
+				//}
+			}
+		}
+		--super.palettefx.timer
+		if ((super.palettefx.timer < 0) && (!isHyperEffect))
+		{//SUPER PALETTE CYCLE
+			super.palettefx.timer = 0x03 //03 not 0f, I want a fast cycle
+			super.palettefx.frame = nextFrame
+		}
+		if ((super.palettefx.timer < 0) && (isHyperEffect))
+		{
+			super.palettefx.timer = 0x01 //01 for the hyper form, very fast!
+			super.palettefx.frame = nextFrame
+		}
+	}
+	else if (super.palettefx.state == 1)
+	{
+		// Fade in
+		//  -> Do not use any fade-in at all
+		super.palettefx.frame = 0
+		super.palettefx.frame.tails = 0
+		super.palettefx.state = 0xff
+		u8[0xffffb02e] = 0		// Reset "char.control_flags"
+	}
+	else  // (super.palettefx.state == 2)
+	{
+		// Fade out
+		if (super.palettefx.frame >= 30)
+		{
+			// This is the first frame, set everything so that only the timer is used
+			super.palettefx.frame = 0
+			super.palettefx.frame.tails = 0
+			super.palettefx.timer = 0x11
+		}
+
+		u16 blendFactor = clamp(u16(super.palettefx.timer) * 0x100 / 0x12, 0, 0x100)
+		for (u8 underwater = 0; underwater < (level.water_present ? 2 : 1); ++underwater)
+		{
+			u32 offset = getMainCharacter() * 0x40 + (underwater ? 0x300 : 0)
+			u32 source = 0x802180 + offset
+			u32 dest   = 0x802000 + offset
+
+			for (u8 k = 0; k < 0x40; k += 2)
+			{
+				u16[dest + k] = blendColorsPacked(u16[source + k], 0x0eee, blendFactor * 3/4)
+			}
+		}
+
+		if (characterVersion == 2)
+		{
+			// Tails: Update of Sonic's colors used by the Flickies
+			u32 superPaletteAddress = 0x00398e + 0x1e
+			for (u8 k = 0; k < 6; k += 2)
+			{
+				u16[0xfffffc04 + k] = blendColorsPacked(u16[0x802184 + k], u16[superPaletteAddress + k], blendFactor)
+			}
+
+			if (level.water_present)
+			{
+				superPaletteAddress = UpdatePaletteEffects.SuperForm.getSuperSonicUnderwaterPalette() + 0x1e
+				for (u8 k = 0; k < 6; k += 2)
+				{
+					u16[0xfffff084 + k] = blendColorsPacked(u16[0x802384 + k], u16[superPaletteAddress + k], blendFactor)
+				}
+			}
+		}
+
+		if (super.palettefx.timer == 0)
+		{
+			// Fully faded out
+			super.palettefx.state = 0
+		}
+		else
+		{
+			--super.palettefx.timer
+		}
+	}
+}

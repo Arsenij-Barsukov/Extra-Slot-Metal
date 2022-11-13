@@ -1,0 +1,713 @@
+//V1.1 Metal doesn't need the peelout to be unlocked
+function void Character.updateUprightOnGround()
+{
+	//this has to trigger for metal only
+	if (XtraChar != 3 || char.character != CHARACTER_SONIC)
+	{
+		base.Character.updateUprightOnGround()
+		return
+	}
+
+	if (Character.UpdateSpindash())
+		return
+
+//NOT LOCKED BY SONIC'S SETTINGS
+	if (Character.updateSuperPeelout())
+		return
+
+	if (Character.CheckStartJump())
+		return
+
+	Character.UpdateUprightSlopeEffect()
+	Character.updateUprightOnGroundInner()
+	Character.CheckForStartRolling()
+
+	Character.sharedUpdateOnGround()
+}
+
+
+//Metal can trigger the overdrive from the peelout action
+function bool Character.updateSuperPeelout()
+{
+	//this has to trigger for metal only
+	if (XtraChar != 3 || char.character != CHARACTER_SONIC)
+	{
+		return base.Character.updateSuperPeelout()
+	}
+	
+	u8 input_state   = control.player1.state
+	u8 input_pressed = control.player1.pressed
+
+	if (char.spindash == 0)
+	{
+		bool canStartPeelout = (char.state == char.state.LOOKING_UP) && (input_pressed & CONTROL_ABC) && (player1.control_override == 0)	// Last check is needed in cutscenes (e.g. end of MHZ 2)
+		if (!canStartPeelout)
+		{
+			// Nothing to see here
+			return false
+		}
+
+		char.state = char.state.RUNNING
+		char.spindash = 0x80
+		char.spindash_charge = 0
+		Audio.playAudio("peelout_charge", AudioContext.CONTEXT_SOUND)
+	}
+	else if (char.spindash == 0x80)
+	{
+		if (input_state & CONTROL_UP)
+		{
+			// Charge up
+			char.spindash_charge = clamp(char.spindash_charge + 0x40, 0x100, 0x800)
+			if (char.flags & char.flag.UNDERWATER)
+			{
+				char.groundspeed = 0x300 + ((super.active) ? (char.spindash_charge) : (char.spindash_charge * 3/4))
+			}
+			else
+			{
+				char.groundspeed = 0x400 + ((super.active) ? (char.spindash_charge * 3/2) : (char.spindash_charge))
+			}
+			//if the the skill has been charged long enough
+			if (Metal.OverdriveCounter < 60)
+			{
+				Metal.OverdriveCounter = Metal.OverdriveCounter +1
+			}
+			else if (Metal.OverdriveCounter >= 60)
+			{
+				Metal.Overdrive = 1
+				Metal.OverdriveCounter = 55
+				playSound(0x5c)
+			}
+			
+			
+			char.flags &= ~char.flag.PUSHING
+			if (abs(char.groundspeed) >= 0x0a00)
+				sonic.fastrunanim.timer = 30
+		}
+		else
+		{
+			if (Metal.Overdrive == 1)
+				Metal.Overdrive = 2
+			releaseSuperPeelout()
+		}
+
+		// Center camera y-offset again
+		centerCameraYOffset()
+	}
+
+	Character.CheckAgainstMoveBorders()
+	Character.UpdateRotationOnGround()
+	partialUpdateCharacterOnGround()
+
+	return true
+}
+
+//metal doesn't dropdash.
+function void Character.updateJumpMoves()
+{
+	//this has to trigger for metal only
+	if (XtraChar != 3 || char.character != CHARACTER_SONIC)
+	{
+		base.Character.updateJumpMoves()
+		return
+	}
+	
+	//restore char.jumping if the discharge is held
+	//this prevents the discharge action from losing control when hitting balloons or rocks in sandopolis and similar objects
+	if (!char.jumping && Metal.DischargeCounter > 0)
+	{
+		char.jumping = true
+	}
+	
+	u8 input_state     = control.player1.state
+	u8 input_pressed   = control.player1.pressed
+	bool isSuperActive = super.active
+
+	if (char.jumping)
+	{
+		// Limit velocity.y
+		s16 max_vy = (char.flags & char.flag.UNDERWATER) ? -0x200 : -0x400
+		if (char.velocity.y < max_vy)
+		{
+			// Limit vertical velocity while not pressing any jump button and not having dashed
+			//  -> This is important to support low jumps by just tapping the button briefly
+			if ((input_state & CONTROL_ABC) == 0)
+			{
+				char.velocity.y = max_vy
+			}
+		}
+		else
+		{
+			if (char.double_jump_state == 0)
+			{
+				#if STANDALONE
+					if (buttonPressed(BUTTON_Y))
+					{
+						if (!isSuperActive && char.invuln.countdown == 0)	// Check invulnerability to prevent spamming of super activate + cancel
+						{
+							if (Character.performSuperTransformation())
+								return
+						}
+					}
+				#endif
+            
+				// Check if pressed jump again in mid-air
+				if (input_pressed & CONTROL_ABC)
+				{
+
+					// Check for other things to do instead of the usual reaction to jump button pressed
+					if (onCharacterPressedJumpInMidAir(input_state, input_pressed))
+					{
+						//METAL HAS AN INSTA-SHIELD DISCHARGE GLIDE
+						//SLOWDOWN GRAVITY WHEN BUTTON HELD
+						Metal.DischargeCounter = 1
+						//char.state = char.state.SONIC_DROPDASH
+						//play electric discharge sound
+						playSound(0x40)			
+						// Remove control lock
+						char.flags &= ~char.flag.CONTROL_LOCK
+						char.double_jump_state = 1
+						if (super.active & 0x80 && !(char.flags & char.flag.UNDERWATER)) //HYPER, not just super and not underwater = kill enemies on start
+						{
+							playSound(0x40)					
+							Character.clearEnemiesOnScreen(water.height.current)
+							global.whiteflash_timeout = 4
+						}						
+					}
+				}
+			}
+			else if (Metal.DischargeCounter > 0)
+			{//Metal is using discharge, unrelated to setting dropdash
+				//If Metal ends underwater, kill all enemies and stop
+				if (char.flags & char.flag.UNDERWATER)
+				{						
+					playSound(0x40)					
+					Character.clearEnemiesOnScreen(water.height.current)
+					global.whiteflash_timeout = 4
+					Metal.DischargeUsed = 1
+					Metal.DischargeCounter = 0
+					char.state = char.state.ROLLING				
+					return
+				}
+			
+				MetalPressedJumpInMidAir()
+				return
+			}
+		}
+	}
+	else
+	{
+		if (char.spindash == 0)
+		{
+			char.velocity.y = max(char.velocity.y, -0x0fc0)
+		}
+	}
+}
+
+function void MetalPressedJumpInMidAir()
+{
+	// Handle air dash for Extra Life
+	//  -> charge when held
+	if (control.player1.state & CONTROL_ABC)
+	{		
+		//HOLD IN MIDAIR -- ALLOW TO MOVE LEFT AND RIGHT A LITTLE AND REDUCE GRAVITY					
+		if (char.velocity.y > 0x100)
+		char.velocity.y = 0x100
+		
+		if (abs(char.velocity.x) > 0x400)
+		{
+			char.velocity.x = (char.flags & char.flag.FACING_LEFT) ? -0x400 : 0x400
+		}
+		return
+	}
+	else
+	{
+		// Stop Charging
+		Metal.DischargeUsed = 1
+		Metal.DischargeCounter = 0
+		char.state = char.state.ROLLING
+		return
+	}
+}
+
+//running over things while on overdrive
+//# address-hook(0x00ffd4) end(0x010214)
+function void Character.OnCollisionWithDynamicObject()
+{
+	// Example values for u8[A1 + 0x28]:
+	//  - 0x06, 0x0b, 0x17, 0x1a = Different types of enemies
+	//  - 0x0f		 = Boss enemy
+	//  - 0x18		 = Extended arm of DEZ Chainspike
+	//  - 0x23		 = AIZ Bloominator
+	//  - 0x46		 = Monitor
+	//  - 0x47		 = Dynamic ring
+	//  - 0x87		 = Extended arm of SOZ Skorp
+	//  - 0x8b, 0x9c = Flames, damaging parts of enemies
+	//  - 0x8f		 = Wrecking ball
+	//  - 0x98, 0x9b = Projectile
+	//  - 0xd8		 = Thrown mushroom, stars over starpost
+//only mighty enters this custom
+	if (XtraChar != 3 || char.character != CHARACTER_SONIC)
+	{
+		base.Character.OnCollisionWithDynamicObject()
+	}
+	else
+	{
+		D1.u8 = u8[A1 + 0x28] & 0xc0
+		if (D1.u8 == 0)
+		{
+			// Collision is an enemy, i.e. is harmful, but can be attacked
+			bool attacking = false
+			if (char.bonus_effect & char.bonus.INVINCIBLE)
+			{
+				attacking = true
+			}
+			else if (char.state == char.state.ROLLING || char.state == char.state.SPINDASH)
+			{
+				attacking = true
+			}
+		#if STANDALONE
+			else if (Game.getSetting(SETTING_DROPDASH) && XtraChar == 3 && char.state == char.state.SONIC_DROPDASH)
+			{
+				attacking = true
+			}
+		#endif
+			else if (Metal.Overdrive > 0)
+			{
+				attacking = true
+			}
+
+			if (!attacking)
+			{
+				bool isThreat = false
+				if (char.character == CHARACTER_KNUCKLES)
+				{
+					isThreat = (char.double_jump_state != 1 && char.double_jump_state != 3)
+				}
+				else if (XtraChar == 3 || char.double_jump_state == 0 || (char.flags & char.flag.UNDERWATER))
+				{
+					isThreat = true
+				}
+				else
+				{
+					s16 dx = char.position.x.u16 - objA1.position.x.u16
+					s16 dy = char.position.y.u16 - objA1.position.y.u16
+					D0.u8 = lookupAngleByVector(dx, dy) - 0x20
+					isThreat = (D0.u8 >= 0x40)
+				}
+
+				if (isThreat)
+				{
+					Character.OnThreatCollision()
+					return
+				}
+			}
+
+			if (u8[A1 + 0x29] != 0)
+			{
+				char.velocity.x = -char.velocity.x
+				char.velocity.y = -char.velocity.y
+				char.groundspeed = -char.groundspeed
+				u8[A1 + 0x1c] = A0.u8
+				u8[A1 + 0x25] = u8[A1 + 0x28]
+				u8[A1 + 0x28] = 0
+				--u8[A1 + 0x29]
+				if (u8[A1 + 0x29] == 0)
+				{
+					u8[A1 + 0x2a] |= 0x80
+				}
+
+				if (char.character == CHARACTER_KNUCKLES)
+				{
+					if (char.double_jump_state == 1)
+					{
+						char.double_jump_state = 2
+						char.state = char.state.KNUX_FALLING
+
+						if (char.velocity.x >= 0)
+							char.flags |= char.flag.FACING_LEFT
+						else
+							char.flags &= ~char.flag.FACING_LEFT
+
+						char.hitbox_extends.x = char.hitbox.default.x
+						char.hitbox_extends.y = char.hitbox.default.y
+					}
+				}
+			}
+			else
+			{
+				if (u8[A1 + 0x2a] & 0x04)
+				{
+					A2 = 0xffff0000 + u16[A1 + 0x3c]
+					u8[A2] &= ~(1 << u8[A1 + 0x3b])
+				}
+
+				u8[A1 + 0x2a] |= 0x80
+
+				// Grant bonus points
+				Enemy.addScore(A1, 0x010216)
+
+				objA1.update_address = 0x01e5e0
+				u8[A1 + 0x05] = 0
+				if (char.velocity.y < 0)
+				{
+					char.velocity.y += 0x100
+				}
+				else if (char.position.y.u16 >= objA1.position.y.u16)
+				{
+					char.velocity.y -= 0x100
+				}
+				else
+				{
+					char.velocity.y = -char.velocity.y
+				}
+			}
+		}
+		else if (D1.u8 == 0x40)
+		{
+			D0.u8 = u8[A1 + 0x28] & 0x3f
+			if (D0.u8 != 0x06)
+			{
+				// Collect ring, but only after 30 invulnerability frames
+				//  -> Remember that the "char.invuln.countdown" timer starts at 120
+				u8 timer = competition_mode.active ? char.invuln.countdown : u8[0xffffb034]
+				if (timer < 90)
+				{
+					u8[A1 + 0x05] = 0x04
+				}
+			}
+			else
+			{
+				// This part seems to be for monitors specifically
+				s16 vy = (global.inv_gravity) ? -char.velocity.y : char.velocity.y
+				bool movingUp = (objA1.render_flags & render_flag.FLIP_Y) ? (vy > 0) : (vy < 0)
+				if (movingUp)
+				{
+					if (u8[A1 + 0x2a] & char.flag.IN_AIR)
+					{
+						if ((objA1.render_flags & render_flag.FLIP_Y) == 0)
+						{
+							if (char.position.y.u16 - 0x10 < objA1.position.y.u16)
+								return
+						}
+						else
+						{
+							if (char.position.y.u16 + 0x10 >= objA1.position.y.u16)
+								return
+						}
+
+						char.velocity.y = -char.velocity.y
+						objA1.velocity.y = -0x180
+						if (u8[A1 + 0x3c] == 0)
+							u8[A1 + 0x3c] = 4
+
+						return
+					}
+					else
+					{
+					#if STANDALONE
+						// In S3AIR, do not allow S&K's monitor opening from the side
+						//  -> This is done to be more consistent with other Sonic games, incl. Sonic 1, 2, CD, Mania and even Sonic 3 alone
+						//  -> The first check above tells us if the character is on a side of the monitor
+						//  -> The second one makes sure that you can always ground-based roll into a monitor (see e.g. first invincibility in MHZ 1, when spindashing into it from the right)
+						if ((u8[A1 + 0x2a] & char.flag.PUSHING) && (char.flags & char.flag.IN_AIR))
+						{
+							return
+						}
+						// TODO: Unfinished code here -- it works, but the falling monitor can crush the player, and is this really what we want?
+					/*
+						else
+						{
+							// Hit monitor from below, make it fall
+							u8[A1 + 0x3c] = 1
+
+							char.velocity.y = -char.velocity.y
+							objA1.velocity.y = -0x180
+							if (u8[A1 + 0x3c] == 0)
+								u8[A1 + 0x3c] = 4
+							return
+						}
+					*/
+					#endif
+					}
+				}
+
+				if (A0 != 0xffffb000 && competition_mode.active == 0)
+				{
+					// Sorry player 2, you can't open monitors in normal game
+					return
+				}
+
+				bool canOpenMonitor = false
+				if (char.state == char.state.ROLLING)
+				{
+					canOpenMonitor = true
+				}
+			#if STANDALONE
+				else if (Game.getSetting(SETTING_DROPDASH) && XtraChar == 3 && char.state == char.state.SONIC_DROPDASH)
+				{
+					canOpenMonitor = true
+				}
+			#endif
+				else if (char.character == CHARACTER_KNUCKLES)
+				{
+					canOpenMonitor = (char.double_jump_state == 1 || char.double_jump_state == 3)
+				}
+
+				if (canOpenMonitor)
+				{
+				#if STANDALONE
+					if (!movingUp)
+				#endif
+					{
+						// Bounce off
+						char.velocity.y = -char.velocity.y
+					}
+					u8[A1 + 0x05] = 4
+					u16[A1 + 0x42] = A0.u16
+				}
+			}
+		}
+		else if (D1.u8 == 0x80)
+		{
+			// Harmful object
+			Character.OnThreatCollision()
+		}
+		else  // D1.u8 == 0xc0
+		{
+			// Other interactable object
+			fn0103ba()
+		}
+	}
+}
+
+//Bullet deflection
+//Metal can deflect stuff all the time, because metal.
+//# address-hook(0x01021e) end(0x010288)
+function void Character.OnThreatCollision()
+{
+	//only check for metal
+	if (XtraChar != 3 || char.character != CHARACTER_SONIC)
+	{
+		base.Character.OnThreatCollision()
+	}
+	else
+	{
+		// Check for shield or invincibility
+		D0.u8 = char.bonus_effect & 0x73
+		if (D0.u8 != 0)
+		{
+			D0.u8 &= u8[A1 + 0x2b]
+			if (D0.u8 != 0)
+			{
+				D0 = 0xffffffff
+				return
+			}
+
+			if ((char.bonus_effect & char.bonus.ANY_SHIELD) == 0)
+			{
+				if ((char.bonus_effect & char.bonus.INVINCIBLE) == 0)
+				{
+					Character.OnThreatCollisionInner()
+				}
+				D0 = 0xffffffff
+				return
+			}
+		}
+		else
+		{
+			// Metal deflects average bullets because he exists
+			//bool canDeflect = true
+		    //
+			//if (!canDeflect)
+			//{
+				Character.OnThreatCollisionInner()
+				return
+			//}
+		}
+
+		if ((u8[A1 + 0x2b] & 0x08) == 0)
+		{
+			if ((char.bonus_effect & char.bonus.INVINCIBLE) == 0)
+			{
+				Character.OnThreatCollisionInner()
+			}
+		}
+		else
+		{
+			deflectProjectile()
+		}
+		D0 = 0xffffffff
+	}
+}
+//UNDERWATER UNLIMITED BREATH FOR METAL
+//# address-hook(0x018466) end(0x018680)
+function void fn018466()
+{
+	A2 = u32[A0 + 0x40]
+
+	if (u8[A2 + 0x38] != CHARACTER_SONIC)
+	{
+		base.fn018466()
+		return
+	}
+	
+	#if GAMEAPP
+		if (Game.getSetting(SETTING_UNDERWATER_AUDIO) && A2 == 0xffffb000 && u8[0xffffb005] <= 0x04)
+		{
+			s16 diff = s16[0xffffb014] - s16(water.height.current)
+			Game.setUnderwaterAudioEffect(clamp(diff - 8, 0, 64) * 0xff / 64)
+		}
+	#endif
+
+	bool doChecks = true
+	if (u16[A0 + 0x30] == 0)
+	{
+		//METAL doesn't care about ANY of this!
+			return		
+	}
+	else
+	{
+		u8[A2 + 0x20] = 0x17
+		--u16[A0 + 0x30]
+		if (u16[A0 + 0x30] == 0)
+		{
+			u8[A2 + 0x05] = 0x06
+			return
+		}
+	}
+
+	if (doChecks)
+	{
+		if (u16[A0 + 0x3a] == 0)
+			return
+
+		--objA0.value3e
+		if (s16[A0 + 0x3e] >= 0)
+			return
+	}
+
+	objA0.value3e = 8 + (getRandomNumber() & 0x0f)
+	if (allocDynamicObjectStd())
+	{
+		u32[A1] = objA0.update_address
+		objA1.position.x.u16 = u16[A2 + 0x10]
+		D0 = 6
+		if (u8[A2 + 0x2a] & char.flag.FACING_LEFT)
+		{
+			D0.s16 = -D0.s16
+			u8[A1 + 0x26] = 0x40
+		}
+		objA1.position.x.u16 += D0.u16
+		objA1.position.y.u16 = u16[A2 + 0x14]
+		u32[A1 + 0x40] = u32[A0 + 0x40]
+		u8[A1 + 0x2c] = 6
+		if (u16[A0 + 0x30] != 0)
+		{
+			objA0.value3e &= 0x07
+			D0.u16 = u16[A2 + 0x14] - 12
+			objA1.position.y.u16 = D0.u16
+			u8[A1 + 0x26] = getRandomNumber()
+			D0.u16 = level.framecounter & 0x03
+			if (D0.u8 == 0)
+			{
+				u8[A1 + 0x2c] = 0x0e
+			}
+		}
+		else
+		{
+			if (objA0.value3a & 0x80)
+			{
+				D2 = u8[A2 + 0x2c]
+				if (D2.u8 < 0x0c)
+				{
+					D2.u16 >>= 1
+					D0.u16 = getRandomNumber() & 0x03
+					if (D0.u16 == 0)
+					{
+						if ((objA0.value3a & 0x40) == 0)
+						{
+							objA0.value3a |= 0x40
+							u8[A1 + 0x2c] = D2.u8
+							u16[A1 + 0x3c] = 28
+						}
+					}
+					if (objA0.flags38 == 0)
+					{
+						if ((objA0.value3a & 0x40) == 0)
+						{
+							objA0.value3a |= 0x40
+							u8[A1 + 0x2c] = D2.u8
+							u16[A1 + 0x3c] = 28
+						}
+					}
+				}
+			}
+		}
+
+		--objA0.flags38
+		if (s8[A0 + 0x38] < 0)
+			u16[A0 + 0x3a] = 0
+	}
+}
+
+//also don't bother collecting bubbles
+//# address-hook(0x02fbb2)
+function void fn02fbb2()
+{
+	if (u8[A1 + 0x38] == CHARACTER_SONIC)
+	{		
+		return
+	}
+	else
+	{
+		base.fn02fbb2()
+	}
+	return
+}
+
+//NO BUBBLE BOUNCE FOR METAL
+function void Character.LandingOnGroundResetState()
+{
+	if (u8[A2 + 0x38] != CHARACTER_SONIC)
+	{
+		base.Character.LandingOnGroundResetState()
+		return
+	}
+	
+	char.flags &= ~char.flag.IN_AIR
+	char.flags &= ~char.flag.PUSHING
+	char.flags &= ~char.flag.CONTROL_LOCK
+	char.jumping = 0
+	score.bonus_counter = 0		// No more increasing bonusses after hitting the ground
+	char.rotation.x = 0
+	u8[A0 + 0x2d] = 0
+	u8[A0 + 0x30] = 0
+	char.look_up_down_timer = 0
+
+	// Check for double jump state
+	if (char.double_jump_state != 0)
+	{
+		//if ((XtraChar == 3 && character == CHARACTER_SONIC) && !super.active && (char.bonus_effect & char.bonus.SHIELD_BUBBLE))
+		//{
+		//#if STANDALONE
+		//	if ((char.bonus_effect & char.bonus.INVINCIBLE) == 0 && sonic.dropdash_counter == 0)
+		//#endif
+		//	{
+		//		SonicLandingBubbleBounce()
+		//	}
+		//}
+		char.double_jump_state = 0
+	}
+
+	// Check for Knuckles gliding/falling/standup state
+	if (char.character == CHARACTER_KNUCKLES && char.state >= 0x20)
+	{
+		char.state = char.state.RUNNING
+	}
+}
+
+//# address-hook(0x012232) end(0x0122b8)
+function void SonicLandingBubbleBounce()
+{ //EH NO, METAL CANNOT BOUNCE
+	return
+}
