@@ -37,7 +37,7 @@
 			},
 			{
 				"InternalName": "MetalPartner",
-				"DisplayName": "Metal Sonic's Partner:",
+				"DisplayName": "Metal Sonic's Partner:(not work)",
 				"Variable": "metal.partner",
 				"DefaultValue": "0",
 				"Category": "Gameplay.",				
